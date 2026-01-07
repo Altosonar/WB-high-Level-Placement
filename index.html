@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pro WB - Pattern Generator</title>
+<link rel="icon" type="image/png" href="https://smartpatternmaking.com/cdn/shop/files/SMART_Pattern_Making_Logo_32x32.png?v=1613504360">
+<style>
+  :root {
+    --brand-orange: #ff4500;
+    --brand-blue: #007bff;
+    --dark-grey: #2d3436;
+    --bg-light: #f8f9fa;
+    --border-light: #e2e8f0;
+    --text-muted: #636e72;
+    --cf-color: #007bff;
+    --global-font-size: 16px; 
+    --soft-active: #4a69bd; 
+    --ui-height: 48px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body { 
+    font-family: 'Inter', system-ui, -apple-system, sans-serif; 
+    background: var(--bg-light); 
+    margin: 0; padding: 15px;
+    color: var(--dark-grey);
+    display: flex;
+    justify-content: center;
+    overflow-x: hidden;
+  }
+
+  .card {
+    background: white; padding: 25px; border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    width: 100%; max-width: 1200px; 
+    position: relative;
+  }
+
+  .header { margin-bottom: 25px; border-left: 5px solid var(--brand-orange); padding-left: 18px; }
+  .header h2 { margin: 0; font-size: 1.8rem; }
+  .header p { margin: 5px 0 0; font-size: var(--global-font-size); color: var(--text-muted); }
+
+  .layout { display: grid; grid-template-columns: 1fr; gap: 25px; }
+  
+  @media (min-width: 992px) {
+    .layout { grid-template-columns: 320px 1fr; }
+  }
+
+  .controls { display: flex; flex-direction: column; gap: 15px; }
+  
+  .input-grid-2x2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 5px;
+  }
+
+  .input-group { display: flex; flex-direction: column; gap: 6px; }
+  
+  label { 
+    font-size: 11px; 
+    font-weight: 800; 
+    text-transform: uppercase; 
+    color: var(--text-muted); 
+    letter-spacing: 0.8px;
+  }
+  
+  input, .seg-input, .toggle-btn, .action-btn, .seg-btn {
+    font-size: var(--global-font-size) !important;
+    font-family: inherit;
+    height: var(--ui-height);
+    font-weight: 700;
+    outline: none;
+  }
+
+  input:focus { border-color: var(--brand-blue); box-shadow: 0 0 0 3px rgba(0,123,255,0.2); }
+
+  input { 
+    padding: 0 12px; border: 2px solid var(--border-light); 
+    border-radius: 10px; transition: 0.2s;
+    width: 100%;
+    background: white;
+  }
+
+  .segmented-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  
+  .seg-wrap {
+    display: flex; align-items: stretch; height: var(--ui-height);
+    border: 2px solid var(--border-light); border-radius: 10px; overflow: hidden;
+  }
+
+  .seg-btn {
+    width: 44px; border: none; background: white; 
+    color: var(--brand-blue); font-size: 24px; font-weight: 900;
+    cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center;
+    user-select: none;
+  }
+  .seg-btn:hover { background: var(--bg-light); }
+
+  .seg-display {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    border-left: 1px solid var(--border-light); border-right: 1px solid var(--border-light);
+    background: white;
+  }
+  
+  .seg-lbl { font-size: 9px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-top: 2px; }
+
+  .seg-input {
+    border: none; text-align: center; font-weight: 900; color: var(--dark-grey);
+    width: 100%; padding: 0; background: transparent; height: auto !important;
+  }
+
+  .toggle-group { display: flex; gap: 8px; }
+  
+  .toggle-btn, .action-btn {
+    flex: 1; padding: 0 10px; text-transform: uppercase;
+    border: 2px solid var(--border-light); border-radius: 10px; cursor: pointer;
+    background: white; transition: 0.2s; text-align: center; color: var(--dark-grey);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .toggle-btn.active { background: var(--brand-blue); color: white; border-color: var(--brand-blue); }
+
+  .action-btn { color: white; border: none; width: 100%; }
+  .straight-btn { background: #5a6268; }
+  .straight-btn.curved-active { background: var(--soft-active); }
+
+  .summary-box { background: #f1f5f9; padding: 15px; border-radius: 12px; margin-top: 5px; display: flex; flex-direction: column; gap: 6px; }
+  .summary-row { display: flex; justify-content: space-between; font-weight: 600; font-size: 14px; }
+  .summary-val { color: var(--brand-blue); font-weight: 800; }
+
+  .viewport-container { position: relative; width: 100%; }
+  .viewport {
+    background: #ffffff; border: 2px solid var(--border-light);
+    border-radius: 15px; height: 75vh; min-height: 550px; overflow: hidden;
+    cursor: grab; touch-action: none; position: relative;
+  }
+
+  .zoom-controls { 
+    position: absolute; bottom: 20px; right: 20px; 
+    display: flex; flex-direction: column; gap: 10px; z-index: 100;
+  }
+  .zoom-btn {
+    width: 48px; height: 48px; border-radius: 12px; border: none;
+    background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    font-size: 20px; font-weight: bold; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--dark-grey);
+  }
+
+  #seam-modal {
+    position: absolute; width: 320px;
+    background: rgba(255, 255, 255, 0.9); 
+    border-radius: 15px; display: none;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+    z-index: 2000; border: 1px solid var(--border-light);
+    backdrop-filter: blur(10px);
+  }
+  #seam-modal.active { display: block; }
+  .modal-header { padding: 12px 15px; cursor: grab; border-bottom: 1px solid rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.03); border-radius: 15px 15px 0 0; }
+
+  svg { width: 100%; height: 100%; }
+  .wb-path { fill: rgba(255, 69, 0, 0.04); stroke: var(--brand-orange); stroke-width: 2.5; }
+  .ext-path { fill: rgba(0, 123, 255, 0.05); stroke: var(--brand-blue); stroke-width: 2.5; }
+  .ext-path.folded { fill: rgba(0, 123, 255, 0.15); stroke: var(--brand-blue); stroke-width: 3; }
+  .seam-path { fill: none; stroke: var(--brand-blue); stroke-width: 1.5; stroke-dasharray: 4,4; pointer-events: none; }
+  .hit-zone { fill: none; stroke: transparent; stroke-width: 35; cursor: cell; pointer-events: stroke; }
+  .cf-line { stroke: var(--cf-color); stroke-width: 3; fill: none; opacity: 0.9; pointer-events: none; }
+</style>
+</head>
+<body>
+
+<div id="seam-modal">
+  <div class="modal-header" id="seam-modal-header">
+    <h3 style="margin:0; font-size:0.9rem; font-weight:800; text-transform:uppercase;">Seam Settings</h3>
+    <span>⠿</span>
+  </div>
+  <div class="modal-body" style="padding:20px;">
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:15px;">
+      <div class="input-group"><label>Top</label><input type="number" id="sa-top" value="0.5" step="0.125" oninput="draw()"></div>
+      <div class="input-group"><label>Bottom</label><input type="number" id="sa-bot" value="0.5" step="0.125" oninput="draw()"></div>
+      <div class="input-group"><label>Left</label><input type="number" id="sa-left" value="0.5" step="0.125" oninput="draw()"></div>
+      <div class="input-group"><label>Right</label><input type="number" id="sa-right" value="0.5" step="0.125" oninput="draw()"></div>
+    </div>
+    <button class="action-btn" style="background:var(--brand-blue);" onclick="closeModal()">Finish & Save</button>
+  </div>
+</div>
+
+<div class="card">
+  <header class="header">
+    <h2>WB Pattern Generator</h2>
+    <p>Solid Orange = Pattern Edge | Blue Dashed = Seam Allowance</p>
+  </header>
+
+  <div class="layout">
+    <aside class="controls">
+      <div class="input-grid-2x2">
+        <div class="input-group">
+          <label>Total Waist</label>
+          <input type="number" id="waist" value="34" step="0.5" oninput="drawAndUpdate()">
+        </div>
+        <div class="input-group">
+          <label>Band Height</label>
+          <input type="number" id="height" value="1.5" step="0.125" oninput="drawAndUpdate()">
+        </div>
+        <div class="input-group">
+          <label>Curve Drop</label>
+          <input type="number" id="drop" value="4" step="0.1" oninput="handleDropInput()">
+        </div>
+        <div class="input-group" style="justify-content: flex-end;">
+          <label>&nbsp;</label>
+          <button id="toggle-type-btn" class="action-btn straight-btn curved-active" onclick="toggleWBShape()">Set Straight</button>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label>Set Extensions (±.25)</label>
+        <div class="segmented-row">
+          <div class="seg-wrap">
+            <button class="seg-btn" onmousedown="startHold('L', -0.25)" onmouseleave="stopHold()" onmouseup="stopHold()">−</button>
+            <div class="seg-display">
+              <input type="number" id="val-l" class="seg-input" value="1.25" step="0.25" oninput="manualExt()">
+              <span class="seg-lbl">Left</span>
+            </div>
+            <button class="seg-btn" onmousedown="startHold('L', 0.25)" onmouseleave="stopHold()" onmouseup="stopHold()">+</button>
+          </div>
+          <div class="seg-wrap">
+            <button class="seg-btn" onmousedown="startHold('R', -0.25)" onmouseleave="stopHold()" onmouseup="stopHold()">−</button>
+            <div class="seg-display">
+              <input type="number" id="val-r" class="seg-input" value="1.50" step="0.25" oninput="manualExt()">
+              <span class="seg-lbl">Right</span>
+            </div>
+            <button class="seg-btn" onmousedown="startHold('R', 0.25)" onmouseleave="stopHold()" onmouseup="stopHold()">+</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label>Extension Control</label>
+        <div class="toggle-group">
+          <button id="ext-f-l" class="toggle-btn" onclick="toggleExtFold('L')">Fold L-Ext.</button>
+          <button id="ext-f-r" class="toggle-btn" onclick="toggleExtFold('R')">Fold R-Ext.</button>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label>Pattern Fold</label>
+        <div class="toggle-group">
+          <button id="fold-l" class="toggle-btn" onclick="toggleFold('L')">Fold Left</button>
+          <button id="fold-r" class="toggle-btn" onclick="toggleFold('R')">Fold Right</button>
+        </div>
+      </div>
+
+      <div class="summary-box" id="summary">
+        <div class="summary-row">Type: <span id="sum-type" class="summary-val">Curved</span></div>
+        <div class="summary-row">Bottom Edge: <span id="sum-main-bot" class="summary-val">17.00"</span></div>
+        <div class="summary-row">Top Edge: <span id="sum-main-top" class="summary-val">17.00"</span></div>
+        <div class="summary-row" style="border-top: 1px solid #cbd5e1; padding-top: 8px; font-weight:800;">Total Cut: <span id="sum-total" class="summary-val">19.75"</span></div>
+      </div>
+    </aside>
+
+    <main class="viewport-container">
+      <div class="viewport" id="viewport-div">
+        <svg id="svg">
+          <g id="viewport-content">
+            <g id="main-group">
+              <path id="seam-shape" class="seam-path" />
+              <path id="wb-shape" class="wb-path" />
+              <path id="ext-l-shape" class="ext-path" />
+              <path id="ext-r-shape" class="ext-path" />
+              <g id="hit-layer"></g>
+              <line id="cf-indicator" class="cf-line" />
+            </g>
+          </g>
+        </svg>
+      </div>
+      <div class="zoom-controls">
+        <button class="zoom-btn" onclick="changeZoom(1.1)">+</button>
+        <button class="zoom-btn" onclick="changeZoom(0.9)">-</button>
+        <button class="zoom-btn" onclick="resetView()">⟲</button>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+  let activeFold = null, extFoldL = false, extFoldR = false;
+  let scale = 1.0, translateX = 0, translateY = 0, isDragging = false, startX, startY;
+  let isStraightMode = false, lastCurveDrop = 4;
+  let holdTimer = null, holdSpeed = 300;
+
+  const viewportDiv = document.getElementById('viewport-div');
+  const viewportContent = document.getElementById('viewport-content');
+  const mainGroup = document.getElementById('main-group');
+  const hitLayer = document.getElementById('hit-layer');
+  const seamModal = document.getElementById('seam-modal');
+  const modalHeader = document.getElementById('seam-modal-header');
+
+  function startHold(side, val) { stopHold(); adjExt(side, val); holdSpeed = 300; const repeat = () => { adjExt(side, val); holdSpeed = Math.max(50, holdSpeed * 0.85); holdTimer = setTimeout(repeat, holdSpeed); }; holdTimer = setTimeout(repeat, 400); }
+  function stopHold() { if (holdTimer) clearTimeout(holdTimer); holdTimer = null; }
+
+  modalHeader.onmousedown = (e) => {
+    let ox = e.clientX - seamModal.offsetLeft, oy = e.clientY - seamModal.offsetTop;
+    document.onmousemove = (ev) => { seamModal.style.left = (ev.clientX - ox) + 'px'; seamModal.style.top = (ev.clientY - oy) + 'px'; };
+    document.onmouseup = () => { document.onmousemove = null; };
+  };
+
+  function openModal() { seamModal.classList.add('active'); seamModal.style.left = "380px"; seamModal.style.top = "80px"; }
+  function closeModal() { seamModal.classList.remove('active'); }
+
+  function handleDropInput() {
+    const dVal = parseFloat(document.getElementById('drop').value) || 0;
+    if (dVal > 0) { lastCurveDrop = dVal; isStraightMode = false; } else { isStraightMode = true; }
+    draw(); updateSummary(); resetView();
+  }
+
+  function drawAndUpdate() { draw(); updateSummary(); }
+  function toggleFold(side) { activeFold = (activeFold === side) ? null : side; draw(); }
+  function toggleExtFold(side) { if(side === 'L') extFoldL = !extFoldL; else extFoldR = !extFoldR; draw(); updateSummary(); }
+  function toggleWBShape() { isStraightMode = !isStraightMode; document.getElementById('drop').value = isStraightMode ? 0 : lastCurveDrop; draw(); updateSummary(); resetView(); }
+  function adjExt(side, val) { const el = document.getElementById(side === 'L' ? 'val-l' : 'val-r'); el.value = Math.max(0, (parseFloat(el.value) || 0) + val).toFixed(2); manualExt(); }
+  function manualExt() { draw(); updateSummary(); }
+
+  viewportDiv.addEventListener('pointerdown', (e) => { if(e.target.classList.contains('hit-zone')) return; isDragging = true; startX = e.clientX - translateX; startY = e.clientY - translateY; viewportDiv.setPointerCapture(e.pointerId); });
+  viewportDiv.addEventListener('pointermove', (e) => { if (isDragging) { translateX = e.clientX - startX; translateY = e.clientY - startY; updateViewportTransform(); }});
+  viewportDiv.addEventListener('pointerup', () => isDragging = false);
+  function changeZoom(f) { scale *= f; updateViewportTransform(); }
+  function resetView() {
+    const bbox = mainGroup.getBBox(); if (bbox.width === 0) return;
+    scale = Math.min((viewportDiv.clientWidth - 100) / bbox.width, (viewportDiv.clientHeight - 100) / bbox.height, 4.0);
+    translateX = (viewportDiv.clientWidth / 2) - (bbox.x + bbox.width / 2) * scale;
+    translateY = (viewportDiv.clientHeight * 0.2) - (bbox.y * scale); // Pushing WB level higher
+    updateViewportTransform();
+  }
+  function updateViewportTransform() { viewportContent.setAttribute('transform', `translate(${translateX}, ${translateY}) scale(${scale})`); }
+
+  function draw() {
+    const W_b = parseFloat(document.getElementById('waist').value) || 0, iH = parseFloat(document.getElementById('height').value) || 0;
+    const eL = parseFloat(document.getElementById('val-l').value) || 0, eR = parseFloat(document.getElementById('val-r').value) || 0;
+    const sT = parseFloat(document.getElementById('sa-top').value) || 0, sB = parseFloat(document.getElementById('sa-bot').value) || 0;
+    const sL = parseFloat(document.getElementById('sa-left').value) || 0, sR = parseFloat(document.getElementById('sa-right').value) || 0;
+    
+    const H = iH * 3, D = parseFloat(document.getElementById('drop').value) || 0, cX = 500, px = 20, tY = 80; // tY pushed slightly higher
+    hitLayer.innerHTML = '';
+    const elL = document.getElementById('ext-l-shape'), elR = document.getElementById('ext-r-shape');
+    extFoldL ? elL.classList.add('folded') : elL.classList.remove('folded');
+    extFoldR ? elR.classList.add('folded') : elR.classList.remove('folded');
+
+    if (isStraightMode || D <= 0) {
+        const mW = (W_b / 2) * px, x1 = cX - mW, x2 = cX + mW;
+        const wbD = activeFold === 'L' ? `M ${cX} ${tY} h ${-mW} v ${H*px} h ${mW} Z` : activeFold === 'R' ? `M ${cX} ${tY} h ${mW} v ${H*px} h ${-mW} Z` : `M ${x1} ${tY} h ${mW*2} v ${H*px} h ${-mW*2} Z`;
+        const extLD = activeFold === 'R' ? "" : (extFoldL ? `M ${x1} ${tY} h ${eL*px} v ${H*px} h ${-eL*px} Z` : `M ${x1} ${tY} h ${-eL*px} v ${H*px} h ${eL*px} Z`);
+        const extRD = activeFold === 'L' ? "" : (extFoldR ? `M ${x2} ${tY} h ${-eR*px} v ${H*px} h ${eR*px} Z` : `M ${x2} ${tY} h ${eR*px} v ${H*px} h ${-eR*px} Z`);
+        
+        document.getElementById('wb-shape').setAttribute('d', wbD);
+        elL.setAttribute('d', extLD); elR.setAttribute('d', extRD);
+
+        const dSL = (activeFold === 'L') ? 0 : sL, dSR = (activeFold === 'R') ? 0 : sR;
+        const bX1 = x1 - (extFoldL ? 0 : eL*px), bX2 = x2 + (extFoldR ? 0 : eR*px);
+        const sx1 = activeFold === 'L' ? cX : bX1 - dSL*px;
+        const sx2 = activeFold === 'R' ? cX : bX2 + dSR*px;
+        document.getElementById('seam-shape').setAttribute('d', `M ${sx1} ${tY-sT*px} H ${sx2} V ${tY+H*px+sB*px} H ${sx1} Z`);
+        
+        [wbD, extLD, extRD].forEach(d => { if(d){ const h=document.createElementNS("http://www.w3.org/2000/svg","path"); h.setAttribute('d',d); h.setAttribute('class','hit-zone'); h.onclick=openModal; hitLayer.appendChild(h); }});
+        document.getElementById('cf-indicator').setAttribute('x1', cX); document.getElementById('cf-indicator').setAttribute('y1', tY-40); document.getElementById('cf-indicator').setAttribute('x2', cX); document.getElementById('cf-indicator').setAttribute('y2', tY+H*px+40);
+    } else {
+        const rI = (D / 2) + (Math.pow(W_b * 0.98, 2) / (8 * D)), rO = rI + H, hA = (W_b / 2) / rI;
+        const cY = tY + (rO * px), mA = Math.PI * 1.5;
+        const gX = (r, a) => cX + (r * px) * Math.cos(a), gY = (r, a) => cY + (r * px) * Math.sin(a);
+        
+        const wbD = activeFold === 'L' ? `M ${cX} ${tY} A ${rO*px} ${rO*px} 0 0 0 ${gX(rO, mA-hA)} ${gY(rO, mA-hA)} L ${gX(rI, mA-hA)} ${gY(rI, mA-hA)} A ${rI*px} ${rI*px} 0 0 1 ${cX} ${cY-rI*px} Z` :
+                    activeFold === 'R' ? `M ${cX} ${tY} A ${rO*px} ${rO*px} 0 0 1 ${gX(rO, mA+hA)} ${gY(rO, mA+hA)} L ${gX(rI, mA+hA)} ${gY(rI, mA+hA)} A ${rI*px} ${rI*px} 0 0 0 ${cX} ${cY-rI*px} Z` :
+                    `M ${gX(rO, mA-hA)} ${gY(rO, mA-hA)} A ${rO*px} ${rO*px} 0 0 1 ${gX(rO, mA+hA)} ${gY(rO, mA+hA)} L ${gX(rI, mA+hA)} ${gY(rI, mA+hA)} A ${rI*px} ${rI*px} 0 0 0 ${gX(rI, mA-hA)} ${gY(rI, mA-hA)} Z`;
+        
+        const aL = eL/rI, aR = eR/rI;
+        const eLD = activeFold === 'R' ? "" : (extFoldL ? `M ${gX(rO, mA-hA)} ${gY(rO, mA-hA)} A ${rO*px} ${rO*px} 0 0 1 ${gX(rO, mA-hA+aL)} ${gY(rO, mA-hA+aL)} L ${gX(rI, mA-hA+aL)} ${gY(rI, mA-hA+aL)} A ${rI*px} ${rI*px} 0 0 0 ${gX(rI, mA-hA)} ${gY(rI, mA-hA)} Z` : `M ${gX(rO, mA-hA)} ${gY(rO, mA-hA)} A ${rO*px} ${rO*px} 0 0 0 ${gX(rO, mA-hA-aL)} ${gY(rO, mA-hA-aL)} L ${gX(rI, mA-hA-aL)} ${gY(rI, mA-hA-aL)} A ${rI*px} ${rI*px} 0 0 1 ${gX(rI, mA-hA)} ${gY(rI, mA-hA)} Z`);
+        const eRD = activeFold === 'L' ? "" : (extFoldR ? `M ${gX(rO, mA+hA)} ${gY(rO, mA+hA)} A ${rO*px} ${rO*px} 0 0 0 ${gX(rO, mA+hA-aR)} ${gY(rO, mA+hA-aR)} L ${gX(rI, mA+hA-aR)} ${gY(rI, mA+hA-aR)} A ${rI*px} ${rI*px} 0 0 1 ${gX(rI, mA+hA)} ${gY(rI, mA+hA)} Z` : `M ${gX(rO, mA+hA)} ${gY(rO, mA+hA)} A ${rO*px} ${rO*px} 0 0 1 ${gX(rO, mA+hA+aR)} ${gY(rO, mA+hA+aR)} L ${gX(rI, mA+hA+aR)} ${gY(rI, mA+hA+aR)} A ${rI*px} ${rI*px} 0 0 0 ${gX(rI, mA+hA)} ${gY(rI, mA+hA)} Z`);
+        
+        document.getElementById('wb-shape').setAttribute('d', wbD);
+        elL.setAttribute('d', eLD); elR.setAttribute('d', eRD);
+
+        const dSL = (activeFold === 'L') ? 0 : sL, dSR = (activeFold === 'R') ? 0 : sR;
+        const startAng = activeFold === 'L' ? mA : mA - hA - (extFoldL ? 0 : aL) - (dSL / rI);
+        const endAng = activeFold === 'R' ? mA : mA + hA + (extFoldR ? 0 : aR) + (dSR / rI);
+        const rSO = rO + sT, rSI = Math.max(0.1, rI - sB);
+        
+        let sD = `M ${gX(rSO, startAng)} ${gY(rSO, startAng)} A ${rSO*px} ${rSO*px} 0 0 1 ${gX(rSO, endAng)} ${gY(rSO, endAng)} L ${gX(rSI, endAng)} ${gY(rSI, endAng)} A ${rSI*px} ${rSI*px} 0 0 0 ${gX(rSI, startAng)} ${gY(rSI, startAng)} Z`;
+        if(activeFold === 'L') sD = `M ${cX} ${tY-sT*px} A ${rSO*px} ${rSO*px} 0 0 1 ${gX(rSO, endAng)} ${gY(rSO, endAng)} L ${gX(rSI, endAng)} ${gY(rSI, endAng)} A ${rSI*px} ${rSI*px} 0 0 0 ${cX} ${cY-rSI*px} Z`;
+        if(activeFold === 'R') sD = `M ${cX} ${tY-sT*px} A ${rSO*px} ${rSO*px} 0 0 0 ${gX(rSO, startAng)} ${gY(rSO, startAng)} L ${gX(rSI, startAng)} ${gY(rSI, startAng)} A ${rSI*px} ${rSI*px} 0 0 1 ${cX} ${cY-rSI*px} Z`;
+        
+        document.getElementById('seam-shape').setAttribute('d', sD);
+        [wbD, eLD, eRD].forEach(d => { if(d){ const h=document.createElementNS("http://www.w3.org/2000/svg","path"); h.setAttribute('d',d); h.setAttribute('class','hit-zone'); h.onclick=openModal; hitLayer.appendChild(h); }});
+        document.getElementById('cf-indicator').setAttribute('x1', cX); document.getElementById('cf-indicator').setAttribute('y1', tY-40); document.getElementById('cf-indicator').setAttribute('x2', cX); document.getElementById('cf-indicator').setAttribute('y2', gY(rI, mA)+40);
+    }
+    updateUI();
+  }
+
+  function updateUI() {
+    document.getElementById('fold-l').className = `toggle-btn ${activeFold === 'L' ? 'active' : ''}`;
+    document.getElementById('fold-r').className = `toggle-btn ${activeFold === 'R' ? 'active' : ''}`;
+    document.getElementById('ext-f-l').className = `toggle-btn ${extFoldL ? 'active' : ''}`;
+    document.getElementById('ext-f-r').className = `toggle-btn ${extFoldR ? 'active' : ''}`;
+    const tB = document.getElementById('toggle-type-btn');
+    tB.textContent = isStraightMode ? "Set Curved" : "Set Straight";
+    !isStraightMode ? tB.classList.add('curved-active') : tB.classList.remove('curved-active');
+  }
+
+  function updateSummary() {
+    const W = parseFloat(document.getElementById('waist').value) || 0, H = parseFloat(document.getElementById('height').value) || 0;
+    const D = parseFloat(document.getElementById('drop').value) || 0, eL = parseFloat(document.getElementById('val-l').value) || 0, eR = parseFloat(document.getElementById('val-r').value) || 0;
+    let tA = W / 2, bA = W / 2;
+    if (!isStraightMode && D > 0) { const rI = (D / 2) + (Math.pow(W * 0.98, 2) / (8 * D)), rO = rI + (H * 3); bA = W / 2; tA = (W / 2 / rI) * rO; }
+    document.getElementById('sum-type').textContent = isStraightMode ? "Straight" : "Curved";
+    document.getElementById('sum-main-bot').textContent = `${bA.toFixed(2)}"`;
+    document.getElementById('sum-main-top').textContent = `${tA.toFixed(2)}"`;
+    document.getElementById('sum-total').textContent = `${(Math.max(tA, bA) + eL + eR).toFixed(2)}"`;
+  }
+
+  window.addEventListener('resize', draw);
+  draw(); updateSummary(); resetView();
+</script>
+</body>
+</html>
