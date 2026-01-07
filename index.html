@@ -14,6 +14,7 @@
     --border-light: #e2e8f0;
     --text-muted: #636e72;
     --cf-color: #007bff;
+    --guide-color: #a29bfe;
     --global-font-size: 16px; 
     --soft-active: #4a69bd; 
     --ui-height: 48px;
@@ -167,6 +168,9 @@
   .seam-path { fill: none; stroke: var(--brand-blue); stroke-width: 1.5; stroke-dasharray: 4,4; pointer-events: none; }
   .hit-zone { fill: none; stroke: transparent; stroke-width: 35; cursor: cell; pointer-events: stroke; }
   .cf-line { stroke: var(--cf-color); stroke-width: 3; fill: none; opacity: 0.9; pointer-events: none; }
+  
+  .drop-guide { stroke: var(--guide-color); stroke-width: 1.5; stroke-dasharray: 2,2; }
+  .drop-label { fill: var(--guide-color); font-size: 14px; font-weight: 800; }
 </style>
 </head>
 <body>
@@ -271,6 +275,11 @@
               <path id="ext-r-shape" class="ext-path" />
               <g id="hit-layer"></g>
               <line id="cf-indicator" class="cf-line" />
+              <g id="drop-visualizer" style="display:none;">
+                <line id="drop-line" class="drop-guide" />
+                <line id="drop-horiz-line" class="drop-guide" />
+                <text id="drop-text" class="drop-label" text-anchor="start" dx="10"></text>
+              </g>
             </g>
           </g>
         </svg>
@@ -310,15 +319,27 @@
   function closeModal() { seamModal.classList.remove('active'); }
 
   function handleDropInput() {
-    const dVal = parseFloat(document.getElementById('drop').value) || 0;
-    if (dVal > 0) { lastCurveDrop = dVal; isStraightMode = false; } else { isStraightMode = true; }
+    const dVal = parseFloat(document.getElementById('drop').value);
+    if (isNaN(dVal) || dVal <= 0) { 
+        isStraightMode = true; 
+        document.getElementById('drop').value = 0;
+    } else { 
+        lastCurveDrop = dVal; 
+        isStraightMode = false; 
+    }
     draw(); updateSummary(); resetView();
   }
 
   function drawAndUpdate() { draw(); updateSummary(); }
   function toggleFold(side) { activeFold = (activeFold === side) ? null : side; draw(); }
   function toggleExtFold(side) { if(side === 'L') extFoldL = !extFoldL; else extFoldR = !extFoldR; draw(); updateSummary(); }
-  function toggleWBShape() { isStraightMode = !isStraightMode; document.getElementById('drop').value = isStraightMode ? 0 : lastCurveDrop; draw(); updateSummary(); resetView(); }
+  
+  function toggleWBShape() { 
+    isStraightMode = !isStraightMode; 
+    document.getElementById('drop').value = isStraightMode ? 0 : lastCurveDrop; 
+    draw(); updateSummary(); resetView(); 
+  }
+
   function adjExt(side, val) { const el = document.getElementById(side === 'L' ? 'val-l' : 'val-r'); el.value = Math.max(0, (parseFloat(el.value) || 0) + val).toFixed(2); manualExt(); }
   function manualExt() { draw(); updateSummary(); }
 
@@ -330,7 +351,7 @@
     const bbox = mainGroup.getBBox(); if (bbox.width === 0) return;
     scale = Math.min((viewportDiv.clientWidth - 100) / bbox.width, (viewportDiv.clientHeight - 100) / bbox.height, 4.0);
     translateX = (viewportDiv.clientWidth / 2) - (bbox.x + bbox.width / 2) * scale;
-    translateY = (viewportDiv.clientHeight * 0.2) - (bbox.y * scale); // Pushing WB level higher
+    translateY = (viewportDiv.clientHeight * 0.2) - (bbox.y * scale);
     updateViewportTransform();
   }
   function updateViewportTransform() { viewportContent.setAttribute('transform', `translate(${translateX}, ${translateY}) scale(${scale})`); }
@@ -341,30 +362,51 @@
     const sT = parseFloat(document.getElementById('sa-top').value) || 0, sB = parseFloat(document.getElementById('sa-bot').value) || 0;
     const sL = parseFloat(document.getElementById('sa-left').value) || 0, sR = parseFloat(document.getElementById('sa-right').value) || 0;
     
-    const H = iH * 3, D = parseFloat(document.getElementById('drop').value) || 0, cX = 500, px = 20, tY = 80; // tY pushed slightly higher
+    const H = iH * 3, D = parseFloat(document.getElementById('drop').value) || 0, cX = 500, px = 20, tY = 80;
     hitLayer.innerHTML = '';
     const elL = document.getElementById('ext-l-shape'), elR = document.getElementById('ext-r-shape');
+    const dropVis = document.getElementById('drop-visualizer');
+    
     extFoldL ? elL.classList.add('folded') : elL.classList.remove('folded');
     extFoldR ? elR.classList.add('folded') : elR.classList.remove('folded');
 
     if (isStraightMode || D <= 0) {
-        const mW = (W_b / 2) * px, x1 = cX - mW, x2 = cX + mW;
-        const wbD = activeFold === 'L' ? `M ${cX} ${tY} h ${-mW} v ${H*px} h ${mW} Z` : activeFold === 'R' ? `M ${cX} ${tY} h ${mW} v ${H*px} h ${-mW} Z` : `M ${x1} ${tY} h ${mW*2} v ${H*px} h ${-mW*2} Z`;
-        const extLD = activeFold === 'R' ? "" : (extFoldL ? `M ${x1} ${tY} h ${eL*px} v ${H*px} h ${-eL*px} Z` : `M ${x1} ${tY} h ${-eL*px} v ${H*px} h ${eL*px} Z`);
-        const extRD = activeFold === 'L' ? "" : (extFoldR ? `M ${x2} ${tY} h ${-eR*px} v ${H*px} h ${eR*px} Z` : `M ${x2} ${tY} h ${eR*px} v ${H*px} h ${-eR*px} Z`);
+        dropVis.style.display = 'none';
+        const mW = (W_b / 2) * px;
+        const x1 = cX - mW, x2 = cX + mW;
+        
+        // Strict Rectangular Paths for Straight Mode
+        const wbD = activeFold === 'L' ? `M ${cX} ${tY} h ${-mW} v ${H*px} h ${mW} Z` : 
+                    activeFold === 'R' ? `M ${cX} ${tY} h ${mW} v ${H*px} h ${-mW} Z` : 
+                    `M ${x1} ${tY} h ${mW*2} v ${H*px} h ${-mW*2} Z`;
+
+        const extLD = activeFold === 'R' ? "" : 
+                     (extFoldL ? `M ${x1} ${tY} h ${eL*px} v ${H*px} h ${-eL*px} Z` : 
+                                `M ${x1} ${tY} h ${-eL*px} v ${H*px} h ${eL*px} Z`);
+                                
+        const extRD = activeFold === 'L' ? "" : 
+                     (extFoldR ? `M ${x2} ${tY} h ${-eR*px} v ${H*px} h ${eR*px} Z` : 
+                                `M ${x2} ${tY} h ${eR*px} v ${H*px} h ${-eR*px} Z`);
         
         document.getElementById('wb-shape').setAttribute('d', wbD);
         elL.setAttribute('d', extLD); elR.setAttribute('d', extRD);
 
-        const dSL = (activeFold === 'L') ? 0 : sL, dSR = (activeFold === 'R') ? 0 : sR;
-        const bX1 = x1 - (extFoldL ? 0 : eL*px), bX2 = x2 + (extFoldR ? 0 : eR*px);
-        const sx1 = activeFold === 'L' ? cX : bX1 - dSL*px;
-        const sx2 = activeFold === 'R' ? cX : bX2 + dSR*px;
+        // Seam Allowance Rect
+        const effEL = (activeFold === 'R' || extFoldL) ? 0 : eL;
+        const effER = (activeFold === 'L' || extFoldR) ? 0 : eR;
+        const dSL = (activeFold === 'L') ? 0 : sL;
+        const dSR = (activeFold === 'R') ? 0 : sR;
+
+        const sx1 = (activeFold === 'L') ? cX : (x1 - effEL*px - dSL*px);
+        const sx2 = (activeFold === 'R') ? cX : (x2 + effER*px + dSR*px);
+        
         document.getElementById('seam-shape').setAttribute('d', `M ${sx1} ${tY-sT*px} H ${sx2} V ${tY+H*px+sB*px} H ${sx1} Z`);
         
         [wbD, extLD, extRD].forEach(d => { if(d){ const h=document.createElementNS("http://www.w3.org/2000/svg","path"); h.setAttribute('d',d); h.setAttribute('class','hit-zone'); h.onclick=openModal; hitLayer.appendChild(h); }});
         document.getElementById('cf-indicator').setAttribute('x1', cX); document.getElementById('cf-indicator').setAttribute('y1', tY-40); document.getElementById('cf-indicator').setAttribute('x2', cX); document.getElementById('cf-indicator').setAttribute('y2', tY+H*px+40);
     } else {
+        // Curve Logic Path
+        dropVis.style.display = 'block';
         const rI = (D / 2) + (Math.pow(W_b * 0.98, 2) / (8 * D)), rO = rI + H, hA = (W_b / 2) / rI;
         const cY = tY + (rO * px), mA = Math.PI * 1.5;
         const gX = (r, a) => cX + (r * px) * Math.cos(a), gY = (r, a) => cY + (r * px) * Math.sin(a);
@@ -390,6 +432,19 @@
         if(activeFold === 'R') sD = `M ${cX} ${tY-sT*px} A ${rSO*px} ${rSO*px} 0 0 0 ${gX(rSO, startAng)} ${gY(rSO, startAng)} L ${gX(rSI, startAng)} ${gY(rSI, startAng)} A ${rSI*px} ${rSI*px} 0 0 1 ${cX} ${cY-rSI*px} Z`;
         
         document.getElementById('seam-shape').setAttribute('d', sD);
+        
+        // Curve Drop Guide
+        const targetAng = activeFold === 'R' ? mA - hA : mA + hA;
+        const endX = gX(rO, targetAng);
+        const endY = gY(rO, targetAng);
+        
+        const dL = document.getElementById('drop-line');
+        const dH = document.getElementById('drop-horiz-line');
+        const dT = document.getElementById('drop-text');
+        dL.setAttribute('x1', endX); dL.setAttribute('y1', endY); dL.setAttribute('x2', endX); dL.setAttribute('y2', tY);
+        dH.setAttribute('x1', cX); dH.setAttribute('y1', tY); dH.setAttribute('x2', endX); dH.setAttribute('y2', tY);
+        dT.setAttribute('x', endX); dT.setAttribute('y', (endY + tY) / 2); dT.textContent = `${D}" Drop`;
+
         [wbD, eLD, eRD].forEach(d => { if(d){ const h=document.createElementNS("http://www.w3.org/2000/svg","path"); h.setAttribute('d',d); h.setAttribute('class','hit-zone'); h.onclick=openModal; hitLayer.appendChild(h); }});
         document.getElementById('cf-indicator').setAttribute('x1', cX); document.getElementById('cf-indicator').setAttribute('y1', tY-40); document.getElementById('cf-indicator').setAttribute('x2', cX); document.getElementById('cf-indicator').setAttribute('y2', gY(rI, mA)+40);
     }
